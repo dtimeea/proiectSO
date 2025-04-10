@@ -6,7 +6,6 @@
 #include <sys/stat.h>   //structuri de date pentru fisiere
 #include <sys/types.h>  //tipuri de date utilizate in sist de fisiere
 #include <errno.h>  //pentru codurile de eroare
-#include <time.h>
 
 typedef struct {
     int treasure_id;    //id-ul comorii
@@ -79,17 +78,10 @@ void add_treasure(char *hunt_id, Treasure *treasure){
         return;
     }
 
-    char buffer[512];     //declaram un buffer pentru a stoca datele comorii
-    int length = snprintf(buffer, sizeof(buffer), "%d %s %.6f %.6f %s %d\n", 
-                            treasure->treasure_id, 
-                            treasure->username, 
-                            treasure->latitude, 
-                            treasure->longitude, 
-                            treasure->clue, 
-                            treasure->value);
-    if(write(fd, buffer, length) <0){
-        perror("eroare la scrierea in fisierul de comori");    
-    }     //scriem in fisier datele comorii
+    ssize_t bytes_written = write(fd, treasure, sizeof(Treasure));   //scriem in fisier datele comorii
+    if(bytes_written != sizeof(Treasure)){
+        perror("eroare la scrierea comorii in fisier");
+    }
     close(fd);
     log_operation("add", hunt_id);     //apelam functia de logare pentru a inregistra operatiunea de adaugare a comorii
 }
@@ -109,20 +101,25 @@ int main(int argc, char *argv[]){
     char *hunt_id = argv[2];  //primim id-ul vanatorii
     directory_hunt(hunt_id);  //apelam functia de creare a directorului de vanatoare
     create_treasure_file(hunt_id);  //apelam functia de creare a fisierului de comori
+    symbolic_link(hunt_id);
 
     if(strcmp(operation, "add") == 0){  //verificam daca operatia este "add"
-        Treasure treasure;  //declaram o variabila de tip Treasure pentru a stoca datele comorii
-        sscanf(argv[3], "%d", &treasure.treasure_id);  //citeste id-ul comorii din argumente
-        sscanf(argv[4], "%s", treasure.username);   //citeste numele utilizatorului din argumente
-        sscanf(argv[5], "%f", &treasure.latitude);   //citeste latitudinea din argumente
-        sscanf(argv[6], "%f", &treasure.longitude);   //citeste longitudinea din argumente
-        sscanf(argv[7], "%s", treasure.clue);   //citeste indiciul din argumente
-        sscanf(argv[8], "%d", &treasure.value);   //citeste valoarea comorii din argumente
-        add_treasure(hunt_id, &treasure);   //apelam functia de adaugare a comorii
-    }else{
-        printf("Operatie invalida: %s\n", operation); 
-        return 1;
+        if(argc < 9){
+            fprintf(stderr, "prea putine argumente pentru comanda 'add'\n");
+            return 1;
+        }
+        Treasure treasure;  //declaram o variabila de tip Treasure
+        treasure.treasure_id = atoi(argv[3]);  //convertim argumentul de la linia de comanda in intreg
+        strncpy(treasure.username, argv[4], sizeof(treasure.username) - 1);  //copiem numele utilizatorului in structura
+        treasure.latitude = atof(argv[5]);  //convertim latitudinea in float
+        treasure.longitude = atof(argv[6]);  //convertim longitudinea in float
+        strncpy(treasure.clue, argv[7], sizeof(treasure.clue) - 1);  //copiem indiciul in structura
+        treasure.value = atoi(argv[8]);  //convertim valoarea in intreg
+
+        add_treasure(hunt_id, &treasure);  //apelam functia de adaugare a comorii
+    } else {
+        fprintf(stderr, "operatie necunoscuta: %s\n", operation);  
+        return 1;  
     }
-    return 0;  
 }
 
