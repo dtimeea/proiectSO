@@ -18,7 +18,7 @@ typedef struct {
 } Treasure;
 
 //logheaza operatiile efectuate (add, remove, view etc)
-void log_operation(char *operation, char *hunt_id){     //operation-string ,tipul de operatie(add,remove,list) iar hunt_id e id-ul vanatorii
+void log_operation(char *operation, char *hunt_id){     //operation-string ,tipul de operatie(add,remove,list) 
     char file_path[70];     //calea catre fisierul de logare
     snprintf(file_path, sizeof(file_path), "%s/logged_hunt.txt", hunt_id);
     //prin functia snprintf construim calea fisierului de logare
@@ -30,8 +30,8 @@ void log_operation(char *operation, char *hunt_id){     //operation-string ,tipu
     }
 
     time_t now = time(NULL);  
-    char time_str[26];   //declaram un array de caractere care va stoca timpul curent
-    ctime_r(&now, time_str);   //obtinem timpul curent in formatul dorit
+    char time_str[26];   //buffer pentru timp in forma de string
+    ctime_r(&now, time_str);   //converteste timpul intr-un string
     time_str[strlen(time_str) - 1] = '\0';   //eliminam '\n' de la sfarsitul sirului
 
     char mesaj_log[256];    //mesajul de logare
@@ -53,11 +53,11 @@ void directory_hunt(char *hunt_id){
 //aceasta functie e pentru crearea unui link simbolic care ajuta la accesarea mai rapida a fisierului de logare printr-un nume mai usor de utilizat
 
 void symbolic_link(char *hunt_id){
-    char link_name[70];     //declaram un array string care va stoca numele linkului simbolic ce va fi creat
+    char link_name[70];     //declaram un array
     snprintf(link_name, sizeof(link_name), "logged_hunt-%s", hunt_id);      //cu snprintf construim numele linkului simbolic
     
     char log_file[70];
-    snprintf(log_file, sizeof(log_file), "%s/logged_hunt.txt", hunt_id);    //am incercat sa pun sprintf dar nu mergea pentru ca e prea lung(sizeof)
+    snprintf(log_file, sizeof(log_file), "%s/logged_hunt.txt", hunt_id);    
     
     struct stat st;
     if(lstat(link_name, &st) == 0){   
@@ -65,17 +65,17 @@ void symbolic_link(char *hunt_id){
         }
     
     if(symlink(log_file,link_name) == -1){  //symlink functie care creaza un link simbolic(primul argument este calea catre fisierul original iar al doilea numele linkului simbolic)
-        perror("eroare la crearea linkului simbolic");     //daca crearea linkului simbolic esueaza, afisam eroarea
+        perror("eroare la crearea linkului simbolic");    
     }
 }
 
 //functie care adauga o comoara in fisier
 void add_treasure(char *hunt_id, Treasure *treasure){
-    char path[70];      //declaram un array de caractere numit path care va stoca calea catre fisierul de comori
+    char path[70];      //declaram un array 
     snprintf(path, sizeof(path), "%s/date.txt", hunt_id);   //cu snprintf construim calea catre fisierul de comori
     
-    int fd = open(path, O_RDWR | O_APPEND | O_CREAT, 0666);     //deschidem fisierul in modul de citire si scriere si adaugare la sfarsit
-    if(fd < 0){      //verificam daca fisierul a fost deschis cu succes
+    int fd = open(path, O_RDWR | O_APPEND | O_CREAT, 0666);     
+    if(fd < 0){      
         perror("eroare la deschiderea fisierului de comori");
         return;
     }
@@ -85,22 +85,22 @@ void add_treasure(char *hunt_id, Treasure *treasure){
         perror("eroare la scrierea comorii in fisier");
     }
     close(fd);
-    log_operation("add", hunt_id);     //apelam functia de logare pentru a inregistra operatiunea de adaugare a comorii
+    log_operation("add", hunt_id);     //inregistram operatiunea de adaugare a comorii in fisierul de log
 }
 
 //listeaza toate comorile
 void list_treasures(char *hunt_id){
-    char path[70];      //declaram un array de caractere numit path care va stoca calea catre fisierul de comori
-    snprintf(path, sizeof(path), "%s/date.txt", hunt_id);   //cu snprintf construim calea catre fisierul de comori
+    char path[70];      //declaram un array 
+    snprintf(path, sizeof(path), "%s/date.txt", hunt_id);   //
     
-    int fd = open(path, O_RDONLY);     //deschidem fisierul in modul de citire
-    if(fd < 0){      //verificam daca fisierul a fost deschis cu succes
+    int fd = open(path, O_RDONLY);     
+    if(fd < 0){      
         perror("eroare la deschiderea fisierului de comori");
         return;
     }
 
-    Treasure treasure;     //declaram o variabila de tip Treasure
-    while(read(fd, &treasure, sizeof(Treasure)) > 0){     //cat timp citim datele din fisier
+    Treasure treasure;     
+    while(read(fd, &treasure, sizeof(Treasure)) > 0){     
         printf("ID: %d, User: %s, Latitude: %.6f, Longitude: %.6f, Clue: %s, Value: %d\n", 
             treasure.treasure_id, treasure.username, treasure.latitude, 
             treasure.longitude, treasure.clue, treasure.value);
@@ -110,20 +110,20 @@ void list_treasures(char *hunt_id){
 
 //afiseaza detalii despre o comoara dupa ID
 void view_treasure(char *hunt_id, int treasure_id){
-    char path[70];      //declaram un array de caractere numit path care va stoca calea catre fisierul de comori
-    snprintf(path, sizeof(path), "%s/date.txt", hunt_id);   //cu snprintf construim calea catre fisierul de comori
+    char path[70];      //declaram un array
+    snprintf(path, sizeof(path), "%s/date.txt", hunt_id);   
     
-    int fd = open(path, O_RDONLY);     //deschidem fisierul in modul de citire
-    if(fd < 0){      //verificam daca fisierul a fost deschis cu succes
+    int fd = open(path, O_RDONLY);     
+    if(fd < 0){      
         perror("eroare la deschiderea fisierului de comori");
         return;
     }
 
-    Treasure treasure;     //declaram o variabila de tip Treasure
+    Treasure treasure;     
     int found=0;
 
-    while(read(fd, &treasure, sizeof(Treasure)) == sizeof(Treasure)){     //cat timp citim datele din fisier
-        if(treasure.treasure_id == treasure_id){     //verificam daca id-ul comorii este cel cautat
+    while(read(fd, &treasure, sizeof(Treasure)) == sizeof(Treasure)){    
+        if(treasure.treasure_id == treasure_id){     
             printf("ID: %d\nUser: %s\nLatitude: %.6f\nLongitude: %.6f\nClue: %s\nValue: %d\n", 
                 treasure.treasure_id, treasure.username, treasure.latitude, 
                 treasure.longitude, treasure.clue, treasure.value);
@@ -133,7 +133,7 @@ void view_treasure(char *hunt_id, int treasure_id){
     }
     close(fd);
 
-    if(!found){     //daca nu am gasit comoara
+    if(!found){    
         printf("comoara nu a fost gasita\n");
     }
     log_operation("view", hunt_id);  
@@ -142,42 +142,42 @@ void view_treasure(char *hunt_id, int treasure_id){
 
 //sterge o comoara dupa ID
 void remove_treasure(char *hunt_id, int treasure_id){
-    char path[70];      //declaram un array de caractere numit path care va stoca calea catre fisierul de comori
-    snprintf(path, sizeof(path), "%s/date.txt", hunt_id);   //cu snprintf construim calea catre fisierul de comori
+    char path[70];      
+    snprintf(path, sizeof(path), "%s/date.txt", hunt_id);   
     
-    int fd = open(path, O_RDONLY);     //deschidem fisierul in modul de citire si scriere
-    if(fd < 0){      //verificam daca fisierul a fost deschis cu succes
+    int fd = open(path, O_RDONLY);     
+    if(fd < 0){      
         perror("eroare la deschiderea fisierului de comori");
         return;
     }
 
-    Treasure *treasures = NULL;     //declaram o variabila de tip Treasure
+    Treasure *treasures = NULL;    
     int count=0;
     Treasure temp;
 
-    while(read(fd, &temp, sizeof(Treasure)) == sizeof(Treasure)){     //cat timp citim datele din fisier
-        if(temp.treasure_id != treasure_id){     //verificam daca id-ul comorii este cel cautat
+    while(read(fd, &temp, sizeof(Treasure)) == sizeof(Treasure)){    
+        if(temp.treasure_id != treasure_id){     
             treasures = realloc(treasures, sizeof(Treasure) * (count + 1));     //realloc pentru a redimensiona memoria alocata
             treasures[count++] = temp;     //adaugam comoara in array
         }
     }
     close(fd);
 
-    fd = open(path, O_WRONLY | O_TRUNC);     //deschidem fisierul in modul de scriere si golim continutul
-    if(fd < 0){      //verificam daca fisierul a fost deschis cu succes
+    fd = open(path, O_WRONLY | O_TRUNC);     //scriere si golire
+    if(fd < 0){   
         perror("eroare la rescierea fisierului de comori");
         free(treasures);
         return;
     }
 
-    for(int i=0; i<count; i++){     //parcurgem array-ul de comori
+    for(int i=0; i<count; i++){     //parcurgem array
         write(fd, &treasures[i], sizeof(Treasure));     //scriem in fisier datele comorii
     }
     close(fd);
     free(treasures);     //eliberam memoria alocata
 
-    printf("comoara cu id-ul %d a fost stearsa\n", treasure_id);     //afisam mesajul de succes
-    log_operation("remove_treasure", hunt_id);     //apelam functia de logare pentru a inregistra operatiunea de stergere a comorii
+    printf("comoara cu id-ul %d a fost stearsa\n", treasure_id);     
+    log_operation("remove_treasure", hunt_id);     
 }
 
 //sterge intreaga vanatoare
@@ -189,20 +189,20 @@ void remove_hunt(char *hunt_id){
         perror("eroare la stergerea vanatorii");
         return;
     }
-    printf("vanatoarea %s a fost stearsa\n", hunt_id);     //afisam mesajul de succes
-    log_operation("remove_hunt", hunt_id);     //apelam functia de logare pentru a inregistra operatiunea de stergere a vanatorii
+    printf("vanatoarea %s a fost stearsa\n", hunt_id);    
+    log_operation("remove_hunt", hunt_id);    
 }
 
 
 int main(int argc, char *argv[]){
-    if(argc < 3){  //verificam daca numarul de argumente este mai mic ca 3
-        printf("prea putine argumente\n");  //afisam mesajul de eroare
+    if(argc < 3){  
+        printf("prea putine argumente\n");  
         
-        return 1;  //returnam eroare
+        return 1;  
     }
     char *operation = argv[1];  //primim operatia dorita
-    char *hunt_id = argv[2];  //primim id-ul vanatorii
-    directory_hunt(hunt_id);  //apelam functia de creare a directorului de vanatoare
+    char *hunt_id = argv[2];  //primim id-ul vanatorii(din linia de comanda)
+    directory_hunt(hunt_id);  
     symbolic_link(hunt_id);
 
     if(strcmp(operation, "--add") == 0){  //verificam daca operatia este "add"
@@ -210,33 +210,33 @@ int main(int argc, char *argv[]){
             fprintf(stderr, "prea putine argumente pentru comanda '--add'\n");
             return 1;
         }
-        Treasure treasure;  //declaram o variabila de tip Treasure
-        treasure.treasure_id = atoi(argv[3]);  //convertim argumentul de la linia de comanda in intreg
+        Treasure treasure;  
+        treasure.treasure_id = atoi(argv[3]);  //convertim id-ul comorii in intreg
         strncpy(treasure.username, argv[4], sizeof(treasure.username) - 1);  //copiem numele utilizatorului in structura
         treasure.latitude = atof(argv[5]);  //convertim latitudinea in float
         treasure.longitude = atof(argv[6]);  //convertim longitudinea in float
         strncpy(treasure.clue, argv[7], sizeof(treasure.clue) - 1);  //copiem indiciul in structura
         treasure.value = atoi(argv[8]);  //convertim valoarea in intreg
 
-        add_treasure(hunt_id, &treasure);  //apelam functia de adaugare a comorii
-    } else if(strcmp(operation, "--list") == 0){  //verificam daca operatia este "list"
-        list_treasures(hunt_id);  //apelam functia de listare a comorilor
-    } else if(strcmp(operation, "--view") == 0){  //verificam daca operatia este "view"
+        add_treasure(hunt_id, &treasure);  
+    } else if(strcmp(operation, "--list") == 0){  
+        list_treasures(hunt_id);  
+    } else if(strcmp(operation, "--view") == 0){  
         if(argc < 4){
             fprintf(stderr, "prea putine argumente pentru comanda '--view'\n");
             return 1;
         }
         int treasure_id = atoi(argv[3]);  //convertim id-ul comorii in intreg
-        view_treasure(hunt_id, treasure_id);  //apelam functia de vizualizare a comorii
-    } else if(strcmp(operation, "--remove") == 0){  //verificam daca operatia este "remove"
+        view_treasure(hunt_id, treasure_id);  
+    } else if(strcmp(operation, "--remove") == 0){  
         if(argc < 4){
             fprintf(stderr, "prea putine argumente pentru comanda '--remove'\n");
             return 1;
         }
         int treasure_id = atoi(argv[3]);  //convertim id-ul comorii in intreg
-        remove_treasure(hunt_id, treasure_id);  //apelam functia de stergere a comorii
-    } else if(strcmp(operation, "--remove-hunt") == 0){  //verificam daca operatia este "remove-hunt"
-        remove_hunt(hunt_id);  //apelam functia de stergere a vanatorii
+        remove_treasure(hunt_id, treasure_id);  
+    } else if(strcmp(operation, "--remove-hunt") == 0){  
+        remove_hunt(hunt_id);  
     } else {
         fprintf(stderr, "operatie necunoscuta: %s\n", operation);  
         return 1;  
