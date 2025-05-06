@@ -3,77 +3,110 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include "treasure_manager.c"
 
 #define CMD_FILE "cmd.txt"
 
-volatile sig_atomic_t command_received = 0;
+pid_t monitor_pid = -1;
+int waiting_for_monitor_exit = 0;
 
-void handle_signal(int sig){
-    command_received = 1;
+void list_hunts(){
+    DIR *dir = opendir(".");
+    if(!dir){
+        perror("eroare la deschiderea directorului");
+        return;
+    }
+
+    struct dirent *entry;
+    while((entry = readdir(dir)) != NULL){
+        if(entry->d_type == DT_DIR &&
+           strcmp(entry->d_name, ".") != 0 &&
+           strcmp(entry->d_name, "..") != 0){
+           char path[256];
+           snprintf(path, sizeof(path), "%s/treasures.bin", entry->d_name);
+            int fd = open(path, O_RDONLY);
+            if(fd < 0){
+                printf("%s (0 comori)\n", entry->d_name);
+                continue;
+            }
+            struct stat st;
+            fstat(fd, &st);
+            int count = st.st_size / sizeof(Treasure);
+            printf("%s (%d comori)\n", entry->d_name, count);
+            close(fd);
+        }
+    }
+    closedir(dir);
 }
 
-void process_command(const char *cmd){
+void process_command(const char *cmd) {
     char hunt_id[50];
-    if(strcmp(cmd, "list_hunts")==0){
-        printf("List of hunts:\n");
+    if (strcmp(cmd, "list_hunts") == 0) {
+        printf("Lista de vanatori:\n");
+        list_hunts();
     } else if (sscanf(cmd, "list_treasures %s", hunt_id) == 1) {
-        printf("Listing treasures for hunt: %s\n", hunt_id);
+        printf("Listare comori pentru vanatoarea: %s\n", hunt_id);
         list_treasures(hunt_id);
     } else if (strncmp(cmd, "view_treasure", 13) == 0) {
         int treasure_id;
         if (sscanf(cmd, "view_treasure %s %d", hunt_id, &treasure_id) == 2) {
-            printf("Viewing treasure %d in hunt: %s\n", treasure_id, hunt_id);
+            printf("Vizualizare comoara %d în vanatoarea: %s\n", treasure_id, hunt_id);
             view_treasure(hunt_id, treasure_id);
         } else {
-            printf("Invalid view_treasure command.\n");
+            printf("Comanda view_treasure invalida.\n");
         }
     } else if (strcmp(cmd, "stop_monitor") == 0) {
-        printf("Monitor stopping...\n");
-        exit(0); // Oprește monitorul
+        printf("Monitorul se opreșae...\n");
+        exit(0);
     } else {
-        printf("Unknown command: %s\n", cmd);
+        printf("Comanda necunoscuta: %s\n", cmd);
     }
 }
 
+void handle_stop(int sig){
+    printf("monitorul se opreste ...\n");
+    waiting_for_monitor_exit = 1;
+    usleep(3000000); // Asteapta 3 secunde
+    exit(0);
+}
 
 void monitor_loop() {
     char command[256];
 
+    int command_received = 0;
     while (1) {
         if (command_received) {
             command_received = 0;
 
             FILE *f = fopen(CMD_FILE, "r");
             if (!f) {
-                perror("Failed to open command file");
+                perror("Eroare la deschiderea fisierului de comenzi");
                 continue;
             }
 
             if (fgets(command, sizeof(command), f)) {
-                command[strcspn(command, "\n")] = 0; // Eliminăm newline-ul
+                command[strcspn(command, "\n")] = 0; // Eliminam newline-ul
                 process_command(command);
             }
             fclose(f);
         }
-        pause(); // Așteaptă următorul semnal
+        pause(); // asteapta un semnal
     }
 }
 
-
 int main() {
     struct sigaction sa;
-    sa.sa_handler = handle_signal;
-    sigemptyset(&sa.sa_mask);
+    sa.sa_handler = handle_stop;
     sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGUSR1, &sa, NULL);
 
-    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
-        perror("sigaction");
-        return 1;
+    while (1) {
+        pause(); 
     }
-
-    printf("Monitor started, PID: %d\n", getpid());
-    monitor_loop();
 
     return 0;
 }
