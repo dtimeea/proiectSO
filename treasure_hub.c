@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#define CMD_FILE "cmd.txt"
+#define CMD_FILE "comenzi.txt"
 
 pid_t monitor_pid = -1;
 int waiting_for_monitor_exit = 0;
@@ -66,7 +66,7 @@ void send_command(const char *cmd) {
     }
 
     if(fclose(f) != 0) {
-        perror("Eroare la închiderea fisierului de comenzi");
+        perror("Eroare la inchiderea fisierului de comenzi");
         return;
     }
 
@@ -76,21 +76,20 @@ void send_command(const char *cmd) {
     }
 }
 
-void stop_monitor(){
-    if(monitor_pid <=0){
-        printf("Monitor not running\n");
+void stop_monitor() {
+    if (monitor_pid <= 0) {
+        printf("Monitorul nu rulează.\n");
         return;
     }
 
     waiting_for_monitor_exit = 1;
     send_command("stop_monitor");
 
-    int status;
-    waitpid(monitor_pid, &status, 0);
-    monitor_pid = -1;
-    waiting_for_monitor_exit = 0;
+    while (waiting_for_monitor_exit) {
+        pause(); // Asteapta semnalul SIGCHLD
+    }
 
-    printf("Monitor stopped. Exit code: %d\n", WEXITSTATUS(status));
+    printf("Monitorul a fost oprit.\n");
 }
 
 void status_monitor() {
@@ -121,7 +120,7 @@ int main(){
     printf("stop_monitor\n");
     printf("exit\n");
 
-    
+
     while(1){
         printf(">");
         if(!fgets(input, sizeof(input), stdin))
