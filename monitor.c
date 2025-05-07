@@ -10,24 +10,25 @@
 
 #define CMD_FILE "comenzi.txt"
 
-pid_t monitor_pid = -1;
+pid_t monitor_pid = -1; // pid-ul monitorului(nefolosit aici efectiv)
 int waiting_for_monitor_exit = 0;
 
-volatile sig_atomic_t command_received = 0; 
+volatile sig_atomic_t command_received = 0;   //flag modificat de semnal, marcat volatile pt a evita optimizari de compilare
 
+//listeaza directoarele care contin fisiere de tip comoara
 void list_hunts(){
-    DIR *dir = opendir(".");
+    DIR *dir = opendir(".");    //deschidem directorul curent
     if(!dir){
         perror("eroare la deschiderea directorului");
         return;
     }
 
-    struct dirent *entry;
+    struct dirent *entry;   //pointer la fiecare intrare
     while((entry = readdir(dir)) != NULL){
         if(entry->d_type == DT_DIR &&
            strcmp(entry->d_name, ".") != 0 &&
            strcmp(entry->d_name, "..") != 0){
-           char path[256];
+           char path[512];
            snprintf(path, sizeof(path), "%s/date", entry->d_name);
             int fd = open(path, O_RDONLY);
             if(fd < 0){
@@ -55,7 +56,7 @@ void process_command(const char *cmd) {
     } else if (strncmp(cmd, "view_treasure", 13) == 0) {
         int treasure_id;
         if (sscanf(cmd, "view_treasure %s %d", hunt_id, &treasure_id) == 2) {
-            printf("Vizualizare comoara %d în vanatoarea: %s\n", treasure_id, hunt_id);
+            printf("Vizualizare comoara %d in vanatoarea: %s\n", treasure_id, hunt_id);
             view_treasure(hunt_id, treasure_id);
         } else {
             printf("Comanda view_treasure invalida.\n");
@@ -80,11 +81,11 @@ void handle_signal(int sig) {
 }
 
 void monitor_loop() {
-    char command[256];
+    char command[256];  // buffer pentru comenzi citite
 
     while (1) {
         if (command_received) {
-            command_received = 0;
+            command_received = 0;   // Reseteaza flag-ul
 
             FILE *f = fopen(CMD_FILE, "r");
             if (!f) {
@@ -92,13 +93,13 @@ void monitor_loop() {
                 continue;
             }
 
-            if (fgets(command, sizeof(command), f)) {
+            if (fgets(command, sizeof(command), f)) {   //citeste o linie din fisier
                 command[strcspn(command, "\n")] = 0; // Eliminam newline-ul
                 process_command(command);
             }
             fclose(f);
 
-            // Golește fisierul dupa procesare
+            // Goleste fisierul dupa procesare
             f = fopen(CMD_FILE, "w");
             if (f) fclose(f);
         }
@@ -107,10 +108,10 @@ void monitor_loop() {
 }
 
 int main() {
-    struct sigaction sa;
+    struct sigaction sa;    // Structura pentru a gestiona semnalele
     sa.sa_handler = handle_signal;
     sa.sa_flags = 0;
-    sigemptyset(&sa.sa_mask);
+    sigemptyset(&sa.sa_mask);   // Initializam masca semnalelor
     sigaction(SIGUSR1, &sa, NULL); // SIGUSR1 pentru procesarea comenzilor
     sigaction(SIGTERM, &sa, NULL); // SIGTERM pentru oprirea monitorului
 
