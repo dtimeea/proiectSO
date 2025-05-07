@@ -6,12 +6,14 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include "treasure_manager.c"
+#include "biblioteca.h"
 
-#define CMD_FILE "cmd.txt"
+#define CMD_FILE "comenzi.txt"
 
 pid_t monitor_pid = -1;
 int waiting_for_monitor_exit = 0;
+
+volatile sig_atomic_t command_received = 0; 
 
 void list_hunts(){
     DIR *dir = opendir(".");
@@ -26,7 +28,7 @@ void list_hunts(){
            strcmp(entry->d_name, ".") != 0 &&
            strcmp(entry->d_name, "..") != 0){
            char path[256];
-           snprintf(path, sizeof(path), "%s/treasures.bin", entry->d_name);
+           snprintf(path, sizeof(path), "%s/date", entry->d_name);
             int fd = open(path, O_RDONLY);
             if(fd < 0){
                 printf("%s (0 comori)\n", entry->d_name);
@@ -59,24 +61,27 @@ void process_command(const char *cmd) {
             printf("Comanda view_treasure invalida.\n");
         }
     } else if (strcmp(cmd, "stop_monitor") == 0) {
-        printf("Monitorul se opreșae...\n");
-        exit(0);
+        printf("Monitorul se opreste...\n");
+        kill(getpid(), SIGTERM); // Folosim SIGTERM pentru oprire
     } else {
         printf("Comanda necunoscuta: %s\n", cmd);
     }
 }
 
-void handle_stop(int sig){
-    printf("monitorul se opreste ...\n");
-    waiting_for_monitor_exit = 1;
-    usleep(3000000); // Asteapta 3 secunde
-    exit(0);
+void handle_signal(int sig) {
+    if (sig == SIGUSR1) {
+        command_received = 1; // Semnalizeaza ca o comanda a fost primita
+    } else if (sig == SIGTERM) {
+        printf("Monitorul se opreste...\n");
+        waiting_for_monitor_exit = 1;
+        usleep(3000000); // asteapta 3 secunde
+        exit(0);
+    }
 }
 
 void monitor_loop() {
     char command[256];
 
-    int command_received = 0;
     while (1) {
         if (command_received) {
             command_received = 0;
@@ -92,21 +97,24 @@ void monitor_loop() {
                 process_command(command);
             }
             fclose(f);
+
+            // Golește fisierul dupa procesare
+            f = fopen(CMD_FILE, "w");
+            if (f) fclose(f);
         }
-        pause(); // asteapta un semnal
+        pause(); // Asteapta un semnal
     }
 }
 
 int main() {
     struct sigaction sa;
-    sa.sa_handler = handle_stop;
+    sa.sa_handler = handle_signal;
     sa.sa_flags = 0;
     sigemptyset(&sa.sa_mask);
-    sigaction(SIGUSR1, &sa, NULL);
+    sigaction(SIGUSR1, &sa, NULL); // SIGUSR1 pentru procesarea comenzilor
+    sigaction(SIGTERM, &sa, NULL); // SIGTERM pentru oprirea monitorului
 
-    while (1) {
-        pause(); 
-    }
-
+    printf("Monitorul a fost pornit. PID: %d\n", getpid());
+    monitor_loop();
     return 0;
 }
