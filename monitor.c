@@ -61,6 +61,11 @@ void process_command(const char *cmd) {
         } else {
             printf("Comanda view_treasure invalida.\n");
         }
+    }else if(strncmp(cmd, "calculate_score", 15)==0){
+        if(sscanf(cmd, "calculate_score %s", hunt_id) == 1){
+            printf("Calculare scor pentru vanatoarea: %s\n", hunt_id);
+            calculate_score(hunt_id);
+    }
     } else if (strcmp(cmd, "stop_monitor") == 0) {
         printf("Monitorul se opreste...\n");
         kill(getpid(), SIGTERM); // Folosim SIGTERM pentru oprire
