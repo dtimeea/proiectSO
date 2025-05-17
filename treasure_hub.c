@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <dirent.h>
 
 #define CMD_FILE "comenzi.txt"
 
@@ -106,6 +107,54 @@ void status_monitor() {
     }
 }
 
+void calculate_score(){
+    DIR *dir = opendir(".");
+    if (!dir) {
+        perror("eroare la deschiderea directorului");
+        return;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_DIR &&
+            strcmp(entry->d_name, ".") != 0 &&
+            strcmp(entry->d_name, "..") != 0){
+                int fd_pipe[2];
+                if(pipe(fd_pipe)== -1){
+                    perror("eroare la crearea pipe-ului");
+                    continue;
+                }
+                pid_t pid = fork();
+                if (pid < 0) {
+                    perror("eroare la fork");
+                    continue;
+                }
+
+                if(pid == 0){
+                    close(fd_pipe[0]);
+                    dup2(fd_pipe[1], STDOUT_FILENO);
+                    close(fd_pipe[1]);
+
+                    execl("./score_calculator", "./score_calculator", entry->d_name, NULL);
+                    perror("eroare la executarea score_calculator");
+                    exit(1);
+                }else{
+                    close(fd_pipe[1]);
+                    char buffer[128];
+                    ssize_t bytes_read;
+                    while((bytes_read = read(fd_pipe[0], buffer, sizeof(buffer)-1)) > 0){
+                        buffer[bytes_read] = '\0';
+                        printf("%s", buffer);
+                    }
+                    close(fd_pipe[0]);
+                    waitpid(pid, NULL, 0);
+                }
+            }
+        }
+    closedir(dir);
+}
+
+
 int main(){
     char input[256];
 
@@ -124,6 +173,7 @@ int main(){
     printf("list_hunts\n");
     printf("list_treasures <hunt_id>\n");
     printf("view_treasure <hunt_id> <treasure_id>\n");
+    printf("calculate_score\n");
     printf("stop_monitor\n");
     printf("exit\n");
 
@@ -150,6 +200,8 @@ int main(){
             send_command(input);
         }else if(strncmp(input, "view_treasure", 13) == 0){
             send_command(input);
+        }else if(strcmp(input, "calculate_score") == 0){
+            send_command("calculate_score");
         }else if(strcmp(input, "stop_monitor") == 0){
             stop_monitor();
         }else if(strcmp(input, "exit") == 0){
