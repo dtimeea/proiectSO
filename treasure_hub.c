@@ -200,8 +200,8 @@ int main(){
             send_command(input);
         }else if(strncmp(input, "view_treasure", 13) == 0){
             send_command(input);
-        }else if(strcmp(input, "calculate_score") == 0){
-            send_command("calculate_score");
+        }else if(strncmp(input, "calculate_score", 15) == 0){
+            send_command(input);
         }else if(strcmp(input, "stop_monitor") == 0){
             stop_monitor();
         }else if(strcmp(input, "exit") == 0){
