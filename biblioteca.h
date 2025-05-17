@@ -192,3 +192,24 @@ void remove_hunt(char *hunt_id){
     printf("vanatoarea %s a fost stearsa\n", hunt_id);    
     log_operation("remove_hunt", hunt_id);    
 }
+
+void calculate_score( char *hunt_id){
+    char path[70];      //declaram un array 
+    snprintf(path, sizeof(path), "%s/date", hunt_id);   //cu snprintf construim calea catre fisierul de comori
+    
+    int fd = open(path, O_RDONLY);     
+    if(fd < 0){      
+        perror("eroare la deschiderea fisierului de comori");
+        return;
+    }
+
+    Treasure treasure;     
+    int total_score =0;
+
+    while(read(fd, &treasure, sizeof(Treasure)) == sizeof(Treasure)){    
+        total_score += treasure.value; //adunam valoarea fiecarei comori
+    }
+    close(fd);
+
+    printf("%s : scor total = %d\n", hunt_id, total_score);
+}
