@@ -10,20 +10,20 @@
 
 #define CMD_FILE "comenzi.txt"
 
-pid_t monitor_pid = -1; // pid-ul monitorului(nefolosit aici efectiv)
+pid_t monitor_pid = -1; 
 int waiting_for_monitor_exit = 0;
 
-volatile sig_atomic_t command_received = 0;   //flag modificat de semnal, marcat volatile pt a evita optimizari de compilare
+volatile sig_atomic_t command_received = 0;   
 
-//listeaza directoarele care contin fisiere de tip comoara
+
 void list_hunts(){
-    DIR *dir = opendir(".");    //deschidem directorul curent
+    DIR *dir = opendir(".");    
     if(!dir){
         perror("eroare la deschiderea directorului");
         return;
     }
 
-    struct dirent *entry;   //pointer la fiecare intrare
+    struct dirent *entry;   
     while((entry = readdir(dir)) != NULL){
         if(entry->d_type == DT_DIR &&
            strcmp(entry->d_name, ".") != 0 &&
@@ -68,7 +68,7 @@ void process_command(const char *cmd) {
     }
     } else if (strcmp(cmd, "stop_monitor") == 0) {
         printf("Monitorul se opreste...\n");
-        kill(getpid(), SIGTERM); // Folosim SIGTERM pentru oprire
+        kill(getpid(), SIGTERM); 
     } else {
         printf("Comanda necunoscuta: %s\n", cmd);
     }
@@ -76,21 +76,21 @@ void process_command(const char *cmd) {
 
 void handle_signal(int sig) {
     if (sig == SIGUSR1) {
-        command_received = 1; // Semnalizeaza ca o comanda a fost primita
+        command_received = 1; 
     } else if (sig == SIGTERM) {
         printf("Monitorul se opreste...\n");
         waiting_for_monitor_exit = 1;
-        usleep(3000000); // asteapta 3 secunde
+        usleep(3000000); 
         exit(0);
     }
 }
 
 void monitor_loop() {
-    char command[256];  // buffer pentru comenzi citite
+    char command[256];  
 
     while (1) {
         if (command_received) {
-            command_received = 0;   // Reseteaza flag-ul
+            command_received = 0;   
 
             FILE *f = fopen(CMD_FILE, "r");
             if (!f) {
@@ -98,27 +98,28 @@ void monitor_loop() {
                 continue;
             }
 
-            if (fgets(command, sizeof(command), f)) {   //citeste o linie din fisier
-                command[strcspn(command, "\n")] = 0; // Eliminam newline-ul
+            if (fgets(command, sizeof(command), f)) {   
+                command[strcspn(command, "\n")] = 0; 
                 process_command(command);
             }
             fclose(f);
 
-            // Goleste fisierul dupa procesare
+            
             f = fopen(CMD_FILE, "w");
             if (f) fclose(f);
         }
-        pause(); // Asteapta un semnal
+        pause(); 
     }
 }
 
 int main() {
-    struct sigaction sa;    // Structura pentru a gestiona semnalele
+
+    struct sigaction sa;    
     sa.sa_handler = handle_signal;
     sa.sa_flags = 0;
-    sigemptyset(&sa.sa_mask);   // Initializam masca semnalelor
-    sigaction(SIGUSR1, &sa, NULL); // SIGUSR1 pentru procesarea comenzilor
-    sigaction(SIGTERM, &sa, NULL); // SIGTERM pentru oprirea monitorului
+    sigemptyset(&sa.sa_mask);   
+    sigaction(SIGUSR1, &sa, NULL); 
+    sigaction(SIGTERM, &sa, NULL); 
 
     printf("Monitorul a fost pornit. PID: %d\n", getpid());
     monitor_loop();
