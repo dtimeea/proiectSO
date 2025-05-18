@@ -10,14 +10,14 @@
 
 #define CMD_FILE "comenzi.txt"
 
-pid_t monitor_pid = -1;// PID-ul procesului monitor(-1 -> nu este pornit)
-int waiting_for_monitor_exit = 0;// flag pentru a verifica daca asteptam terminarea monitorului(initializat pe 0 nu se opreste)
+pid_t monitor_pid = -1;
+int waiting_for_monitor_exit = 0;
 
-//monitor->copilul (treasure_hub->parintele)
-// handler pentru SIGCHLD, detecteaza terminarea procesului monitor
+
+
 void sigchld_handler(int sig){
     int status;
-    pid_t pid = waitpid(-1, &status, WNOHANG);//WHNOHANG -> nu blocheaza waitpid asteapta terminarea unui proces copil
+    pid_t pid = waitpid(-1, &status, WNOHANG);
     if (pid == monitor_pid){
         printf("Monitorul s-a oprit cu codul de iesire %d\n", WEXITSTATUS(status));
         monitor_pid = -1;
@@ -25,31 +25,30 @@ void sigchld_handler(int sig){
     }
 }
 
-// Functia care creaza un proces copil care va rula monitorul
+
 void start_monitor() {
     if (monitor_pid > 0) {
         printf("Monitorul ruleaza deja cu PID %d\n", monitor_pid);
         return;
     }
-    pid_t pid = fork();//fork->creaza un proces copil
+    pid_t pid = fork();
     if (pid < 0) {
         perror("Eroare la crearea procesului monitor");
         exit(1);
     }
-    if (pid == 0) {//daca pid e 0 -> suntem in procesul copil iar execl lanseaza executabilul monitor
+    if (pid == 0) {
         execl("./monitor", "./monitor", NULL);
         perror("Eroare la executarea monitorului");
         exit(1);
-    } else {//daca fork e > 0 -> suntem in procesul parinte si afiseaza PID-ul monitorului
+    } else {
         monitor_pid = pid;
         printf("Monitorul a fost pornit cu PID %d\n", monitor_pid);
     }
 }
 
-//functie care scrie comanda in fisierul de comenzi
-// si trimite semnalul SIGUSR1 catre monitor pentru a-l anunta ca o comanda e disponibila
+
 void send_command(const char *cmd) {
-    if (monitor_pid <= 0) {//monitorul nu ruleaza 
+    if (monitor_pid <= 0) {
         printf("Monitorul nu ruleaza.\n");
         return;
     }
@@ -88,17 +87,17 @@ void stop_monitor() {
         return;
     }
 
-    waiting_for_monitor_exit = 1;//asteptam monitorul sa se opreasca
+    waiting_for_monitor_exit = 1;
     send_command("stop_monitor");
 
     while (waiting_for_monitor_exit) {
-        pause(); // Asteapta semnalul SIGCHLD
+        pause(); 
     }
 
     printf("Monitorul a fost oprit.\n");
 }
 
-//verifica daca monitorul este sau nu pornit prin verificarea valorii monitor_pid
+
 void status_monitor() {
     if (monitor_pid > 0) {
         printf("Monitorul ruleaza cu PID %d.\n", monitor_pid);
@@ -158,7 +157,7 @@ void calculate_score(){
 int main(){
     char input[256];
 
-    // Setam handler-ul pentru SIGCHLD
+    
     struct sigaction sa;
     sa.sa_handler = sigchld_handler;
     sigemptyset(&sa.sa_mask);
@@ -178,15 +177,15 @@ int main(){
     printf("exit\n");
 
 
-    // Bucla principala pentru a citi comenzile de la utilizator
+    
     while(1){
         printf(">");
-        if(!fgets(input, sizeof(input), stdin))//fgets citeste o linie de la tastatura si o salveaza in input
+        if(!fgets(input, sizeof(input), stdin))
              break;
-        input[strcspn(input, "\n")] = 0; // eliminam newline-ul de la sfarsitul sirului
+        input[strcspn(input, "\n")] = 0; 
 
 
-        //procesarea comenzilor
+        
         if(waiting_for_monitor_exit){
             printf("Monitor is stopping. Please wait...\n");
             continue;
