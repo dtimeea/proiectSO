@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    char *hunt_id = argv[1];  //primim id-ul vanatorii(din linia de comanda)
+    char *hunt_id = argv[1];  
     char path[256];
     snprintf(path, sizeof(path), "%s/date", hunt_id); 
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     int total_score =0;
 
     while (read(fd, &t, sizeof(Treasure)) == sizeof(Treasure)) {
-        total_score += t.value; //adunam valoarea fiecarei comori
+        total_score += t.value; 
     }
 
     close(fd);
